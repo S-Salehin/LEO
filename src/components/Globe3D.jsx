@@ -107,11 +107,11 @@ function parseTLEText(tleText) {
   const lines = tleText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   // Detect synthetic CSV (comma in first data line or '#')
   if (lines[0]?.startsWith("#") || (lines[0] && lines[0].includes(","))) {
-    // Format: name,alt_km,inc_deg,raan_deg,mean_motion_rev_per_day,kind,health,battery
+    // Format: name,alt_km,inc_deg,raan_deg,mean_motion_rev_per_day,kind,health,battery,fuel
     const out = [];
     for (const ln of lines) {
       if (!ln || ln.startsWith("#")) continue;
-      const [name, alt, inc, raan, mm, kind, health, battery] = ln.split(/\s*,\s*/);
+      const [name, alt, inc, raan, mm, kind, health, battery, fuel] = ln.split(/\s*,\s*/);
       if (!name || !alt || !inc || !raan || !mm) continue;
       out.push({
         mode: "synthetic",
@@ -123,7 +123,8 @@ function parseTLEText(tleText) {
         m0: Math.random() * 2 * Math.PI,
         kind: (kind || "sat").toLowerCase(),
         health: health ? parseFloat(health) : 100,
-        battery: battery ? parseFloat(battery) : 100
+        battery: battery ? parseFloat(battery) : 100,
+        fuel: fuel ? parseFloat(fuel) : 0
       });
     }
     return out;
@@ -346,15 +347,15 @@ export default function Globe3D({ onSelect, overlayType = "none", overlayDate })
       /* ---------------------- hover billboard sprite ---------------------- */
       const makeLabelSprite = (text) => {
         const c = document.createElement("canvas");
-        c.width = 1024; c.height = 512;
+        c.width = 1200; c.height = 700; // Increased canvas size to prevent cropping
         const ctx = c.getContext("2d");
         const draw = (t) => {
           ctx.clearRect(0,0,c.width,c.height);
           // panel
-          ctx.fillStyle = "rgba(9,12,18,0.85)";
-          ctx.strokeStyle = "rgba(255,255,255,0.08)";
-          ctx.lineWidth = 8;
-          const r = 48;
+          ctx.fillStyle = "rgba(9,12,18,0.9)"; // More opaque background
+          ctx.strokeStyle = "rgba(0,212,255,0.3)"; // Cyan border
+          ctx.lineWidth = 6;
+          const r = 40;
           ctx.beginPath();
           ctx.moveTo(r,0); ctx.lineTo(c.width-r,0); ctx.quadraticCurveTo(c.width,0,c.width,r);
           ctx.lineTo(c.width,c.height-r); ctx.quadraticCurveTo(c.width,c.height,c.width-r,c.height);
@@ -362,19 +363,22 @@ export default function Globe3D({ onSelect, overlayType = "none", overlayDate })
           ctx.lineTo(0,r); ctx.quadraticCurveTo(0,0,r,0); ctx.closePath();
           ctx.fill(); ctx.stroke();
 
-          // text
-          ctx.fillStyle = "#e5f1ff";
-          ctx.font = "bold 80px ui-sans-serif, system-ui, -apple-system, Segoe UI";
+          // text with better spacing
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 70px ui-sans-serif, system-ui, -apple-system, Segoe UI";
           const lines = t.split("\n");
-          let y = 120;
-          for (const ln of lines) { ctx.fillText(ln, 60, y); y += 90; }
+          let y = 100;
+          for (const ln of lines) { 
+            ctx.fillText(ln, 50, y); 
+            y += 85; // Better line spacing
+          }
         };
         draw(text);
         const tex = new THREE.CanvasTexture(c);
         tex.minFilter = THREE.LinearFilter;
         const mat = new THREE.SpriteMaterial({ map: tex, depthWrite:false, transparent:true });
         const spr = new THREE.Sprite(mat);
-        spr.scale.set(2.2, 1.1, 1); // world units; we’ll rescale per distance
+        spr.scale.set(2.5, 1.5, 1); // Larger scale to accommodate more content
         spr.userData._canvas = c;
         spr.userData._draw = draw;
         spr.userData._tex = tex;
@@ -389,13 +393,13 @@ export default function Globe3D({ onSelect, overlayType = "none", overlayDate })
         if (!spr) return;
         spr.userData._draw(text);
         spr.userData._tex.needsUpdate = true;
-        // position slightly off the marker
-        spr.position.copy(anchor.clone().multiplyScalar(1.08));
+        // position slightly off the marker with better positioning
+        spr.position.copy(anchor.clone().multiplyScalar(1.12));
         spr.lookAt(cam.position);
-        // keep (roughly) constant on-screen size
+        // keep (roughly) constant on-screen size with better scaling
         const dist = spr.position.distanceTo(cam.position);
-        const k = Math.max(1.3, Math.min(3.6, dist * 0.45));
-        spr.scale.set(k, k*0.5, 1);
+        const k = Math.max(1.5, Math.min(4.0, dist * 0.5));
+        spr.scale.set(k, k*0.6, 1); // Increased height ratio for better text visibility
         spr.visible = true;
       }
 
@@ -473,7 +477,8 @@ export default function Globe3D({ onSelect, overlayType = "none", overlayDate })
             lifecycle, 
             altKm,
             health: t.health || 100,
-            battery: t.battery || 100
+            battery: t.battery || 100,
+            fuel: t.fuel || 0
           };
           scene.add(satGroup); 
           satMeshes.push(satGroup);
@@ -1312,11 +1317,14 @@ export default function Globe3D({ onSelect, overlayType = "none", overlayDate })
             `φ: ${fmt(info.lat_deg)}°`
           ];
           
-          // Add health and battery for satellites
+          // Add health, battery, and fuel for satellites
           if (obj.userData.kind === "sat" && obj.userData.health !== undefined) {
             const healthIcon = obj.userData.health > 80 ? "✓" : obj.userData.health > 50 ? "⚠" : "✗";
             const batteryIcon = obj.userData.battery > 70 ? "🔋" : obj.userData.battery > 30 ? "🪫" : "⚠️";
+            const fuelIcon = obj.userData.fuel > 50 ? "⛽" : obj.userData.fuel > 20 ? "🟡" : "🔴";
+            const needsRefuel = obj.userData.fuel < 30 ? " [REFUEL NEEDED]" : "";
             lines.push(`${healthIcon} Health: ${obj.userData.health}%   ${batteryIcon} Battery: ${obj.userData.battery}%`);
+            lines.push(`${fuelIcon} Fuel: ${obj.userData.fuel}%${needsRefuel}`);
           }
           
           const txt = lines.join("\n");

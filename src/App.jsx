@@ -12,14 +12,7 @@ export default function App() {
       {/* SINGLE top bar with NASA logo (left) and the route tabs (right) */}
       <nav className="main-nav">
         <div className="nav-left">
-          {/* NASA logo – you can keep this external URL or drop a local file (see CSS notes) */}
-          <img
-            className="nasa-logo"
-            src="https://www.nasa.gov/wp-content/themes/nasatwo/images/nasa-logo.svg"
-            alt="NASA"
-            height={26}
-          />
-          <span className="product">LEO Steward OS</span>
+          <span className="product">AstroLEO</span>
         </div>
 
         <div className="nav-right">

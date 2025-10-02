@@ -4,13 +4,50 @@ import { Sparkline, Donut } from "../components/SimpleCharts";
 import { predictCollisionRisk } from "../ai/riskModel";
 import RevenueChart from "../components/RevenueChart";
 
+async function fetchTLEData() {
+  try {
+    const response = await fetch('/tle/custom.tle');
+    const text = await response.text();
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    
+    const objects = [];
+    for (const ln of lines) {
+      if (!ln || ln.startsWith("#")) continue;
+      const [name, alt, inc, raan, mm, kind, health, battery, fuel] = ln.split(/\s*,\s*/);
+      if (!name || !alt || !inc || !raan || !mm) continue;
+      
+      objects.push({
+        id: name,
+        name,
+        altKm: parseFloat(alt),
+        incDeg: parseFloat(inc),
+        raanDeg: parseFloat(raan),
+        type: (kind || "sat").toLowerCase(),
+        density: kind === "debris" ? 0.42 : 0.25 + (Math.random() * 0.15),
+        health: health ? parseFloat(health) : 100,
+        battery: battery ? parseFloat(battery) : 100,
+        fuel: fuel ? parseFloat(fuel) : 0
+      });
+    }
+    return objects;
+  } catch (error) {
+    console.error("Failed to load TLE data:", error);
+    return [];
+  }
+}
+
 function useObjects() {
-  return (window?.leo?.objects && window.leo.objects.length)
-    ? window.leo.objects
-    : Array.from({length:26}).map((_,i)=>({
-        id:`R-${i+1}`, name:`Obj-${i+1}`, altKm:500+(i%8)*35, incDeg:50+(i%5)*8,
-        raanDeg:(i*33)%360, type:i<6?"debris":"sat", density:0.25+((i%6)*0.06)
-      }));
+  const [objects, setObjects] = React.useState([]);
+  
+  React.useEffect(() => {
+    fetchTLEData().then(setObjects);
+  }, []);
+  
+  return objects.length ? objects : Array.from({length:26}).map((_,i)=>({
+    id:`R-${i+1}`, name:`Obj-${i+1}`, altKm:500+(i%8)*35, incDeg:50+(i%5)*8,
+    raanDeg:(i*33)%360, type:i<6?"debris":"sat", density:0.25+((i%6)*0.06),
+    health: 100, battery: 100, fuel: 50
+  }));
 }
 
 export default function Reports() {
@@ -165,6 +202,132 @@ export default function Reports() {
           
           {/* Revenue Chart */}
           <RevenueChart />
+          
+          {/* Refueling Analysis */}
+          <div className="card">
+            <div className="card-title">⛽ Refueling Operations</div>
+            {(() => {
+              const satellites = objs.filter(o => o.type === "sat");
+              const needsRefuel = satellites.filter(s => s.fuel < 30);
+              const lowFuel = satellites.filter(s => s.fuel >= 30 && s.fuel < 50);
+              const goodFuel = satellites.filter(s => s.fuel >= 50);
+              const avgFuel = satellites.length ? satellites.reduce((sum, s) => sum + s.fuel, 0) / satellites.length : 0;
+              
+              return (
+                <>
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    gap: 12,
+                    marginBottom: 16
+                  }}>
+                    <div style={{
+                      background: "linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(13, 26, 48, 0.8) 100%)",
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "1px solid var(--danger)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+                        🔴 Critical
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--danger)" }}>
+                        {needsRefuel.length}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                        &lt;30% fuel
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "linear-gradient(135deg, rgba(255, 214, 0, 0.1) 0%, rgba(13, 26, 48, 0.8) 100%)",
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "1px solid var(--warning)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+                        🟡 Low
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--warning)" }}>
+                        {lowFuel.length}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                        30-50% fuel
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "linear-gradient(135deg, rgba(0, 255, 159, 0.1) 0%, rgba(13, 26, 48, 0.8) 100%)",
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "1px solid var(--success)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>
+                        ⛽ Good
+                      </div>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: "var(--success)" }}>
+                        {goodFuel.length}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                        &gt;50% fuel
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    background: "rgba(0, 212, 255, 0.05)",
+                    padding: 16,
+                    borderRadius: 10,
+                    marginBottom: 16
+                  }}>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+                      Fleet Average Fuel Level
+                    </div>
+                    <div style={{ 
+                      background: "rgba(13, 26, 48, 0.6)", 
+                      borderRadius: 20, 
+                      height: 8, 
+                      position: "relative",
+                      overflow: "hidden"
+                    }}>
+                      <div style={{
+                        background: avgFuel < 30 ? "var(--danger)" : avgFuel < 50 ? "var(--warning)" : "var(--success)",
+                        width: `${avgFuel}%`,
+                        height: "100%",
+                        borderRadius: 20,
+                        transition: "width 0.3s ease"
+                      }} />
+                    </div>
+                    <div style={{ 
+                      fontSize: 14, 
+                      fontWeight: 700, 
+                      color: avgFuel < 30 ? "var(--danger)" : avgFuel < 50 ? "var(--warning)" : "var(--success)",
+                      marginTop: 8
+                    }}>
+                      {avgFuel.toFixed(1)}%
+                    </div>
+                  </div>
+                  
+                  <div style={{
+                    background: "linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(13, 26, 48, 0.8) 100%)",
+                    padding: 16,
+                    borderRadius: 10,
+                    border: "1px solid var(--brand)"
+                  }}>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+                      💰 Refueling Revenue Potential
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--brand)" }}>
+                      ${(needsRefuel.length * 1.5 + lowFuel.length * 0.8).toFixed(1)}M
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--muted)" }}>
+                      Critical: $1.5M each • Low: $800K each
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Right Column - Detailed Analysis */}

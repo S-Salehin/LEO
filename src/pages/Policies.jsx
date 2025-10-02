@@ -13,7 +13,7 @@ async function fetchTLEData() {
     const objects = [];
     for (const ln of lines) {
       if (!ln || ln.startsWith("#")) continue;
-      const [name, alt, inc, raan, mm, kind, health, battery] = ln.split(/\s*,\s*/);
+      const [name, alt, inc, raan, mm, kind, health, battery, fuel] = ln.split(/\s*,\s*/);
       if (!name || !alt || !inc || !raan || !mm) continue;
       
       objects.push({
@@ -25,7 +25,8 @@ async function fetchTLEData() {
         type: (kind || "sat").toLowerCase(),
         density: kind === "debris" ? 0.42 : 0.25 + (Math.random() * 0.15),
         health: health ? parseFloat(health) : 100,
-        battery: battery ? parseFloat(battery) : 100
+        battery: battery ? parseFloat(battery) : 100,
+        fuel: fuel ? parseFloat(fuel) : 0
       });
     }
     return objects;
