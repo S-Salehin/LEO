@@ -83,7 +83,7 @@ export default function Dashboard() {
           The top-right route tabs come from App.jsx (main-nav). */}
       <div className="topbar">
         <div className="brand">
-          NASA <span>AstroLEO</span>
+          NASA<span>AstroLEO</span>
           <div style={{ 
             fontSize: 11, 
             fontWeight: 400, 
