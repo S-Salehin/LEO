@@ -12,7 +12,7 @@ export default function App() {
       {/* SINGLE top bar with NASA logo (left) and the route tabs (right) */}
       <nav className="main-nav">
         <div className="nav-left">
-          <span className="product">OrbitX</span>
+          <span className="product">Orbit_X</span>
         </div>
 
         <div className="nav-right">
