@@ -1,4 +1,4 @@
-# 🛰️ LEO Steward OS
+# 🛰️ AstroLEO by Orbit_X
 
 **Mission Control System for Low Earth Orbit Debris Management**
 
@@ -10,7 +10,7 @@
 
 ## 🌟 Overview
 
-**LEO Steward OS** is an advanced mission control dashboard for managing active debris removal operations in Low Earth Orbit. Built for the **NASA Space Apps Challenge 2025**, this system demonstrates a sustainable business model for commercializing LEO operations through debris removal, orbital recycling, and satellite life extension services.
+**AsteoLEO** is an advanced mission control dashboard for managing active debris removal operations in Low Earth Orbit. Built for the **NASA Space Apps Challenge 2025**, this system demonstrates a sustainable business model for commercializing LEO operations through debris removal, orbital recycling, and satellite life extension services.
 
 ### 🎯 Key Features
 
