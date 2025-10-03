@@ -12,6 +12,8 @@
 
 **AsteoLEO** is an advanced mission control dashboard for managing active debris removal operations in Low Earth Orbit. Built for the **NASA Space Apps Challenge 2025**, this system demonstrates a sustainable business model for commercializing LEO operations through debris removal, orbital recycling, and satellite life extension services.
 
+Live: https://leo-orbit-x-2025.vercel.app/
+
 ### 🎯 Key Features
 
 - **🌍 Real-time 3D Earth Visualization** - NASA GIBS satellite imagery with environmental data overlays
